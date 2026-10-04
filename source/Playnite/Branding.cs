@@ -55,7 +55,7 @@ namespace Playnite
         /// Whether a crash report may be uploaded. Never: Playnite's diagnostics service is Josef
         /// Nemec's, and a GameTable crash is not his to read. The package is saved and shown instead.
         /// </summary>
-        public const bool UploadsDiagnostics = false;
+        public static readonly bool UploadsDiagnostics = false;
 
         /// <summary>
         /// Strings that name the upstream project rather than this app, and so keep "Playnite".
