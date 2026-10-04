@@ -133,7 +133,7 @@ namespace PlayniteInstaller
         public MainViewModel(Window window)
         {
             windowHost = window;
-            DestionationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "Playnite");
+            DestionationFolder = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "GameTable");
             UrlMirrors = ParseList(Resources.ReadFileFromResource("PlayniteInstaller.installer_mirrors.txt"));
             logger.Debug("Server mirrors in use:");
             UrlMirrors.ForEach(a => logger.Debug(a));
@@ -149,7 +149,7 @@ namespace PlayniteInstaller
 
             if (dialog.ShowDialog() == DialogResult.OK)
             {
-                DestionationFolder = Path.Combine(dialog.SelectedPath, "Playnite");
+                DestionationFolder = Path.Combine(dialog.SelectedPath, "GameTable");
             }
         }
 

@@ -83,10 +83,10 @@ namespace Playnite
             LocalizationsStatusPath = Path.Combine(LocalizationsPath, "locstatus.json");
             ThemesProgramPath = Path.Combine(ProgramPath, ThemesDirName);
             EmulationDatabasePath = Path.Combine(ProgramPath, "Emulation", "Database");
-            TempPath = Path.Combine(Path.GetTempPath(), "Playnite");
+            TempPath = Path.Combine(Path.GetTempPath(), Branding.DataFolderName);
 
             // We need to always initialize some default set for environments like Blend or Rider
-            UpdateUserDataDir(IsPortable ? ProgramPath : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Playnite"));
+            UpdateUserDataDir(IsPortable ? ProgramPath : Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), Branding.DataFolderName));
         }
 
         public static void UpdateUserDataDir(string dir)

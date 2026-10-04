@@ -236,9 +236,16 @@ namespace Playnite.ViewModels
                 }
 
                 var mode = PlayniteApplication.Current.Mode;
-                if (PlayniteEnvironment.InOfflineMode && mode == ApplicationMode.Desktop)
+                // GameTable never uploads: Playnite's diagnostics service is upstream's, not ours.
+                if ((PlayniteEnvironment.InOfflineMode || !Branding.UploadsDiagnostics) && mode == ApplicationMode.Desktop)
                 {
                     Explorer.NavigateToFileSystemEntry(diagPath);
+                    return;
+                }
+
+                if (!Branding.UploadsDiagnostics)
+                {
+                    dialogs.ShowMessage(diagPath);
                     return;
                 }
 

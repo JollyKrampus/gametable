@@ -1055,7 +1055,7 @@ namespace Playnite
                 }
 
                 var args = new CmdLineOptions() { Start = game.Id.ToString() }.ToString();
-                Programs.CreateUrlShortcut($"playnite://playnite/start/{game.Id}", icon, path);
+                Programs.CreateUrlShortcut($"{Branding.UriScheme}://playnite/start/{game.Id}", icon, path);
             }
             catch (Exception exc) when (!PlayniteEnvironment.ThrowAllErrors)
             {

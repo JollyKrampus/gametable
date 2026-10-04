@@ -187,6 +187,12 @@ namespace Playnite
             }
 
             CurrentLanguage = language;
+
+            // GameTable: the product is renamed in every loaded language, source English included.
+            foreach (var dictionary in dictionaries.Where(a => a.Contains("LanguageName")))
+            {
+                Branding.ApplyTo(dictionary);
+            }
         }
 
         public static void LoadAddonLocalization(string addonDir)
@@ -220,6 +226,7 @@ namespace Playnite
                     return;
                 }
 
+                Branding.ApplyTo(res);
                 dictionaries.Add(res);
             }
 
