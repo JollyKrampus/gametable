@@ -49,9 +49,18 @@ jobs:
       - name: Run tests
         shell: pwsh
         run: |
-          $dlls = Get-ChildItem source/Tests -Recurse -Filter '*.Tests.dll' | Where-Object { $_.FullName -like '*\bin\*' -and $_.FullName -notlike '*\obj\*' }
+          # Each test assembly from its own project only: Playnite.Tests.dll is also copied into the
+          # other test projects' bins, and would otherwise run twice.
+          $dlls = Get-ChildItem source/Tests -Recurse -Filter '*.Tests.dll' |
+            Where-Object { $_.FullName -like "*\$($_.BaseName)\bin\*" -and $_.FullName -notlike '*\obj\*' }
           $dlls | ForEach-Object { Write-Host $_.FullName }
-          & "${{ steps.msbuild.outputs.vstest }}" ($dlls.FullName) /Platform:x86 /logger:trx /ResultsDirectory:TestResults
+          # Upstream runs no tests in CI (appveyor: test: off). Three of its tests assume a desk, not
+          # a hosted runner: CanWriteToFolderTest and OverUnsafeWorksTest expect a system folder the
+          # user cannot write, and the runner is an administrator; RelativePathTest scans the TestApp
+          # folder copied in by a post-build xcopy and finds no emulator there. They are skipped here
+          # by name, and run on a desk build.
+          $skip = 'Name!=CanWriteToFolderTest&Name!=OverUnsafeWorksTest&Name!=RelativePathTest'
+          & "${{ steps.msbuild.outputs.vstest }}" ($dlls.FullName) /Platform:x86 /TestCaseFilter:$skip /logger:trx /ResultsDirectory:TestResults
           if ($LASTEXITCODE -ne 0) { throw "tests failed" }
 
       - uses: actions/upload-artifact@v4
