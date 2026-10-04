@@ -42,7 +42,8 @@ jobs:
         shell: pwsh
         run: |
           dotnet restore source/Playnite.slnx
-          & "${{ steps.msbuild.outputs.msbuild }}" source/Tests/Playnite.Tests/Playnite.Tests.csproj /p:Configuration=Debug /p:Platform=x86 /p:SolutionDir="$PWD\source\\" /m /v:minimal
+          # The whole solution, so the test plugins Playnite.Tests copies in are built first.
+          & "${{ steps.msbuild.outputs.msbuild }}" source/Playnite.slnx /p:Configuration=Debug /p:Platform=x86 /m /v:minimal
           if ($LASTEXITCODE -ne 0) { throw "test build failed" }
           & "${{ steps.msbuild.outputs.msbuild }}" source/Tests/PalantirLibrary.Tests/PalantirLibrary.Tests.csproj /p:Configuration=Debug /p:Platform=x86 /p:SolutionDir="$PWD\source\\" /m /v:minimal
           if ($LASTEXITCODE -ne 0) { throw "Palantír library test build failed" }
