@@ -1,7 +1,7 @@
 # GameTable
 
 **GameTable is [Playnite](https://github.com/JosefNemec/Playnite), forked, as the play queue's head for
-Palantír** (house-of-order, ADR 0038). It is Playnite in every feature. The name, the data folder
+Palantír** (house-of-order, ADR 0039). It is Playnite in every feature. The name, the data folder
 (`%AppData%\GameTable`), the `gametable://` link scheme and the update feed are its own, so it can sit
 beside a real Playnite on the same PC. Every Playnite add-on and theme loads unchanged, because the
 code's namespaces and the SDK are Playnite's.

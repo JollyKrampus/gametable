@@ -2,7 +2,7 @@
 
 GameTable's bridge to the house. Palantír's play queue appears as a GameTable library, and the
 edits and playtime made in GameTable go back to it. The decision behind it is house-of-order
-ADR 0038; the house-side runbook is in `docs/operations.md`, under *GameTable against the server*.
+ADR 0039; the house-side runbook is in `docs/operations.md`, under *GameTable against the server*.
 
 ## Setting it up
 

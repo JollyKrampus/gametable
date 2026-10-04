@@ -16,7 +16,7 @@ namespace PalantirLibrary
 {
     /// <summary>
     /// Palantír's play queue as a GameTable library, and the one bridge between GameTable and the
-    /// house (house-of-order ADR 0038).
+    /// house (house-of-order ADR 0039).
     /// </summary>
     /// <remarks>
     /// <para>
