@@ -1,0 +1,72 @@
+# GameTable's build: Playnite's own build script, on GitHub's hosted Windows runner.
+# Playnite targets .NET Framework 4.6.2 and resolves COM references, which needs the .NET Framework
+# MSBuild that ships with Visual Studio - so this runs where Visual Studio is, not on `dotnet build`.
+name: build
+
+on:
+  push:
+    branches: [master, 'claude/**']
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Find MSBuild
+        id: msbuild
+        shell: pwsh
+        run: |
+          $vswhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
+          $path = & $vswhere -latest -requires Microsoft.Component.MSBuild -find 'MSBuild\**\Bin\MSBuild.exe' | Select-Object -First 1
+          $vstest = & $vswhere -latest -find '**\vstest.console.exe' | Select-Object -First 1
+          "msbuild=$path" >> $env:GITHUB_OUTPUT
+          "vstest=$vstest" >> $env:GITHUB_OUTPUT
+          Write-Host "MSBuild: $path"; Write-Host "vstest: $vstest"
+
+      - name: PowerShell modules the build script needs
+        shell: pwsh
+        run: Install-Module powershell-yaml -Force -Scope CurrentUser
+
+      - name: Build and package
+        shell: pwsh
+        run: .\build\build.ps1 -Configuration Release -Package -MSBuildPath "${{ steps.msbuild.outputs.msbuild }}"
+
+      - name: Build tests
+        shell: pwsh
+        run: |
+          dotnet restore source/Playnite.slnx
+          & "${{ steps.msbuild.outputs.msbuild }}" source/Tests/Playnite.Tests/Playnite.Tests.csproj /p:Configuration=Debug /p:Platform=x86 /p:SolutionDir="$PWD\source\\" /m /v:minimal
+          if ($LASTEXITCODE -ne 0) { throw "test build failed" }
+
+      - name: Run tests
+        shell: pwsh
+        run: |
+          $dlls = Get-ChildItem source/Tests -Recurse -Filter '*.Tests.dll' | Where-Object { $_.FullName -match '\bin\' -and $_.FullName -notmatch '\obj\' }
+          $dlls | ForEach-Object { Write-Host $_.FullName }
+          & "${{ steps.msbuild.outputs.vstest }}" ($dlls.FullName) /Platform:x86 /logger:trx /ResultsDirectory:TestResults
+          if ($LASTEXITCODE -ne 0) { throw "tests failed" }
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: test-results
+          path: TestResults
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: GameTable
+          path: build/*.zip
+
+      - name: Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name }}" build/*.zip --title "GameTable ${{ github.ref_name }}" --notes "GameTable ${{ github.ref_name }}, based on Playnite by Josef Nemec (MIT)."
