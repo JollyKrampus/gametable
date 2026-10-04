@@ -49,7 +49,7 @@ jobs:
       - name: Run tests
         shell: pwsh
         run: |
-          $dlls = Get-ChildItem source/Tests -Recurse -Filter '*.Tests.dll' | Where-Object { $_.FullName -match '\bin\' -and $_.FullName -notmatch '\obj\' }
+          $dlls = Get-ChildItem source/Tests -Recurse -Filter '*.Tests.dll' | Where-Object { $_.FullName -like '*\bin\*' -and $_.FullName -notlike '*\obj\*' }
           $dlls | ForEach-Object { Write-Host $_.FullName }
           & "${{ steps.msbuild.outputs.vstest }}" ($dlls.FullName) /Platform:x86 /logger:trx /ResultsDirectory:TestResults
           if ($LASTEXITCODE -ne 0) { throw "tests failed" }
