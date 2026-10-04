@@ -22,6 +22,12 @@
     <Project Path="Tests/TestGameLibrary/TestGameLibrary.csproj" />
     <Project Path="Tests/TestMetadataPlugin/TestMetadataPlugin.csproj" />
     <Project Path="Tests/TestPlugin/TestPlugin.csproj" />
+    <Project Path="Tests/PalantirLibrary.Tests/PalantirLibrary.Tests.csproj">
+      <Platform Project="x86" />
+    </Project>
+  </Folder>
+  <Folder Name="/Plugins/">
+    <Project Path="Plugins/PalantirLibrary/PalantirLibrary.csproj" />
   </Folder>
   <Folder Name="/Tools/">
     <Project Path="Tools/Playnite.Toolbox/Playnite.Toolbox.csproj">

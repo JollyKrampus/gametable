@@ -44,6 +44,8 @@ jobs:
           dotnet restore source/Playnite.slnx
           & "${{ steps.msbuild.outputs.msbuild }}" source/Tests/Playnite.Tests/Playnite.Tests.csproj /p:Configuration=Debug /p:Platform=x86 /p:SolutionDir="$PWD\source\\" /m /v:minimal
           if ($LASTEXITCODE -ne 0) { throw "test build failed" }
+          & "${{ steps.msbuild.outputs.msbuild }}" source/Tests/PalantirLibrary.Tests/PalantirLibrary.Tests.csproj /p:Configuration=Debug /p:Platform=x86 /p:SolutionDir="$PWD\source\\" /m /v:minimal
+          if ($LASTEXITCODE -ne 0) { throw "Palantír library test build failed" }
 
       - name: Run tests
         shell: pwsh
@@ -58,6 +60,14 @@ jobs:
         with:
           name: test-results
           path: TestResults
+
+      - name: The Palantír library is in the package
+        shell: pwsh
+        run: |
+          foreach ($f in 'extension.yaml', 'PalantirLibrary.dll') {
+            if (!(Test-Path "build/Release/Extensions/PalantirLibrary/$f")) { throw "Extensions/PalantirLibrary/$f is missing from the build" }
+          }
+          if (Test-Path "build/Release/Extensions/PalantirLibrary/Playnite.SDK.dll") { throw "the SDK must not be copied beside the plugin" }
 
       - uses: actions/upload-artifact@v4
         with:
