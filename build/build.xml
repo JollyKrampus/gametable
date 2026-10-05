@@ -24,6 +24,19 @@
             Projects="../source/PlayniteSDK/Playnite.SDK.csproj"
             Targets="Build"
             Properties="OutputPath=$(OutputPath); Configuration=$(Configuration); AllowedReferenceRelatedFileExtensions=none; Platform=AnyCPU" />
+        <!-- GameTable: the Palantír library ships inside the app, as an extension in the program
+             folder, the way Playnite's own built-in extensions load. It is built in place and only
+             its own two files are copied: an OutputPath handed to it would flow to the SDK it
+             references too, and put a second Playnite.SDK.dll beside it. -->
+        <MSBuild
+            Projects="../source/Plugins/PalantirLibrary/PalantirLibrary.csproj"
+            Targets="Build"
+            Properties="Configuration=$(Configuration); Platform=AnyCPU">
+            <Output TaskParameter="TargetOutputs" ItemName="PalantirLibraryAssembly" />
+        </MSBuild>
+        <Copy
+            SourceFiles="@(PalantirLibraryAssembly);../source/Plugins/PalantirLibrary/extension.yaml"
+            DestinationFolder="$(OutputPath)\Extensions\PalantirLibrary\" />
         <MSBuild
             Projects="../source/Tools/PlayniteInstaller/PlayniteInstaller.csproj"
             Targets="Build"

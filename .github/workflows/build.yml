@@ -82,6 +82,14 @@ jobs:
           name: test-results
           path: TestResults
 
+      - name: The Palantír library is in the package
+        shell: pwsh
+        run: |
+          foreach ($f in 'extension.yaml', 'PalantirLibrary.dll') {
+            if (!(Test-Path "build/Release/Extensions/PalantirLibrary/$f")) { throw "Extensions/PalantirLibrary/$f is missing from the build" }
+          }
+          if (Test-Path "build/Release/Extensions/PalantirLibrary/Playnite.SDK.dll") { throw "the SDK must not be copied beside the plugin" }
+
       - uses: actions/upload-artifact@v4
         with:
           name: GameTable

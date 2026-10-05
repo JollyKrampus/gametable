@@ -1,3 +1,36 @@
+# GameTable
+
+**GameTable is [Playnite](https://github.com/JosefNemec/Playnite), forked, as the play queue's head for
+Palantír** (house-of-order, ADR 0039). It is Playnite in every feature. The name, the data folder
+(`%AppData%\GameTable`), the `gametable://` link scheme and the update feed are its own, so it can sit
+beside a real Playnite on the same PC. Every Playnite add-on and theme loads unchanged, because the
+code's namespaces and the SDK are Playnite's.
+
+What it adds is one built-in library, **Palantír** ([`source/Plugins/PalantirLibrary`](source/Plugins/PalantirLibrary/README.md)).
+It imports the house's play queue over the tailnet and writes back status, score, tags, notes and
+the minutes a game ran. It never deletes anything in the house.
+
+- **Build:** GitHub Actions (`.github/workflows/build.yml`) on a hosted Windows runner, using
+  Playnite's own `build/build.ps1`. Playnite needs the .NET Framework MSBuild that comes with Visual
+  Studio. A `v*` tag publishes a release with `GameTable.zip`.
+- **Branding lives in one file:** [`source/Playnite/Branding.cs`](source/Playnite/Branding.cs). Strings
+  are renamed at load, not in the translation files.
+- **Keeping up with Playnite**, monthly:
+
+  ```
+  git fetch upstream
+  git merge upstream/master
+  ```
+
+  Conflicts should land only in `Branding.cs`, `build/build.ps1` and the handful of lines that call
+  into it.
+- **Licence:** MIT, as upstream. Josef Nemec's copyright notice in `LICENSE.md` stays. GameTable
+  sends nothing to Playnite's diagnostics service.
+
+Everything below is upstream's README.
+
+---
+
 
 # <img src="https://playnite.link/applogo.png" width="32">  Playnite [![Crowdin](https://badges.crowdin.net/playnite/localized.svg)](https://crowdin.com/project/playnite)
 An open source video game library manager and launcher with support for 3rd party libraries like Steam, Epic, GOG, EA App, Battle.net and [others](https://playnite.link/addons.html). Includes game emulation support, providing one unified interface for your games.

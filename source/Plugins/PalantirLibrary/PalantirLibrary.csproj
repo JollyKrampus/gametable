@@ -1,0 +1,33 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- GameTable's bridge to Palantír: the house's play queue as a Playnite library, and the edits
+       and play sessions made here written back. See README.md beside this file. -->
+  <PropertyGroup>
+    <TargetFramework>net462</TargetFramework>
+    <UseWpf>true</UseWpf>
+    <LangVersion>12</LangVersion>
+    <AssemblyName>PalantirLibrary</AssemblyName>
+    <RootNamespace>PalantirLibrary</RootNamespace>
+    <!-- Newtonsoft 10.0.3 is the one GameTable ships and loads (Playnite.csproj); the plugin binds to
+         it rather than bringing its own, so the version must match and the audit is upstream's. -->
+    <NoWarn>$(NoWarn);NU1903</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="PalantirLibrary.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="extension.yaml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Both are already loaded by GameTable itself, so neither is copied beside the plugin. -->
+    <ProjectReference Include="..\..\PlayniteSDK\Playnite.SDK.csproj" Private="false" />
+    <PackageReference Include="Newtonsoft.Json" Version="10.0.3" ExcludeAssets="runtime" />
+    <Reference Include="System.Net.Http" />
+  </ItemGroup>
+
+</Project>
