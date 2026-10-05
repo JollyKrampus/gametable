@@ -154,6 +154,17 @@ if (!$SkipBuild)
         Invoke-WebRequest $LicensedDependenciesUrl -OutFile $depArchive
         Expand-ZipToDirectory $depArchive (Resolve-Path "..").Path
     }
+    elseif ($Configuration -eq "Release")
+    {
+        # GameTable: without upstream's private archive, release with GameTable's own settings
+        # (its update feed, Playnite's public add-on catalogue, online). The dev file is put back
+        # after the build so the working tree stays clean.
+        Write-OperationLog "Using GameTable release settings..."
+        $commonConfig = "..\source\Playnite\Common.config"
+        $commonConfigBackup = Join-Path $env:TEMP "GameTable.Common.config.dev"
+        Copy-Item $commonConfig $commonConfigBackup -Force
+        Copy-Item ".\GameTable.Common.config" $commonConfig -Force
+    }
 
     if ($OnlineInstallerConfig)
     {
@@ -176,6 +187,11 @@ if (!$SkipBuild)
 
     $arguments = "build.xml /p:SolutionDir=`"$solutionDir\\`" /p:OutputPath=`"$OutputDir`";Configuration=$configuration /property:Platform=$Platform /t:Build"
     $compilerResult = StartAndWait $msbuildPath $arguments
+    if ($commonConfigBackup -and (Test-Path $commonConfigBackup))
+    {
+        Copy-Item $commonConfigBackup $commonConfig -Force
+    }
+
     if ($compilerResult -ne 0)
     {
         throw "Build failed."
@@ -211,7 +227,7 @@ New-Folder $InstallerDir
 if ($Package)
 {
     Write-OperationLog "Building zip package..."
-    $packageName = Join-Path $InstallerDir "Playnite.zip"
+    $packageName = Join-Path $InstallerDir "GameTable.zip"
     New-ZipFromDirectory $OutputDir $packageName
 }
 

@@ -8,7 +8,7 @@
         mc:Ignorable="d"
         WindowStartupLocation="CenterScreen" ResizeMode="NoResize"
         Background="#252422"
-        Title="Playnite Installer" Width="600" SizeToContent="Height">
+        Title="GameTable Installer" Width="600" SizeToContent="Height">
     
     <StackPanel Margin="10">
         <StackPanel.Resources>

@@ -35,7 +35,7 @@ namespace Playnite
     public abstract class PlayniteApplication : ObservableObject, IPlayniteApplication
     {
         private ILogger logger = LogManager.GetLogger();
-        private const string instanceMuxet = "PlayniteInstaceMutex";
+        private const string instanceMuxet = Branding.InstanceMutexName;
         private Mutex appMutex;
         public bool ResourcesReleased { get; private set; } = false;
         private PipeService pipeService;
@@ -162,7 +162,7 @@ namespace Playnite
                         .WaitAndRetry(3, a => TimeSpan.FromSeconds(3))
                         .Execute(() => pipeService = new PipeService());
                 pipeService.CommandExecuted += PipeService_CommandExecuted;
-                pipeServer = new PipeServer(PlayniteSettings.GetAppConfigValue("PipeEndpoint"));
+                pipeServer = new PipeServer(Branding.PipeEndpoint);
                 pipeServer.StartServer(pipeService);
             }
             catch (Exception exc) when (!PlayniteEnvironment.ThrowAllErrors)
@@ -973,7 +973,7 @@ namespace Playnite
                         .WaitAndRetry(3, a => TimeSpan.FromSeconds(3))
                         .Execute(() =>
                         {
-                            var client = new PipeClient(PlayniteSettings.GetAppConfigValue("PipeEndpoint"));
+                            var client = new PipeClient(Branding.PipeEndpoint);
                             if (!CmdLine.Start.IsNullOrEmpty())
                             {
                                 client.InvokeCommand(CmdlineCommand.Start, [CmdLine.Start, CmdLine.ActionIndex?.ToString()]);

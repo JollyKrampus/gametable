@@ -23,16 +23,16 @@ namespace Playnite
             using (var classes = root.OpenSubKey(@"Software\Classes", true))
             {
                 var openString = $"\"{PlaynitePaths.DesktopExecutablePath}\" --uridata \"%1\"";
-                var existing = classes.OpenSubKey(@"Playnite\shell\open\command");
+                var existing = classes.OpenSubKey(Branding.UriRegistryKey + @"\shell\open\command");
                 if (existing != null && existing.GetValue(string.Empty)?.ToString() == openString)
                 {
                     existing.Dispose();
                     return;
                 }
 
-                using (var newEntry = classes.CreateSubKey("Playnite"))
+                using (var newEntry = classes.CreateSubKey(Branding.UriRegistryKey))
                 {
-                    newEntry.SetValue(string.Empty, "URL:playnite");
+                    newEntry.SetValue(string.Empty, "URL:" + Branding.UriScheme);
                     newEntry.SetValue("URL Protocol", string.Empty);
                     using (var command = newEntry.CreateSubKey(@"shell\open\command"))
                     {
@@ -45,7 +45,7 @@ namespace Playnite
         public static void SetBootupStateRegistration(bool runOnBootup, bool startClosed)
         {
             var startupPath = Environment.GetFolderPath(Environment.SpecialFolder.Startup, Environment.SpecialFolderOption.Create);
-            var shortcutPath = Path.Combine(startupPath, "Playnite.lnk");
+            var shortcutPath = Path.Combine(startupPath, Branding.StartupShortcutName);
             if (runOnBootup)
             {
                 var args = new CmdLineOptions()
