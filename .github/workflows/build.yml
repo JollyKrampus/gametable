@@ -61,7 +61,20 @@ jobs:
           # by name, and run on a desk build.
           $skip = 'Name!=CanWriteToFolderTest&Name!=OverUnsafeWorksTest&Name!=RelativePathTest'
           & "${{ steps.msbuild.outputs.vstest }}" ($dlls.FullName) /Platform:x86 /TestCaseFilter:$skip /logger:trx /ResultsDirectory:TestResults
-          if ($LASTEXITCODE -ne 0) { throw "tests failed" }
+          if ($LASTEXITCODE -eq 0) { exit 0 }
+
+          # A few upstream tests race the runner: ShellExecuteTest kills notepad and checks after
+          # 200 ms, and RotatingBackupTest counts files named by timestamp. Each failed once on a
+          # commit that passed on the next run. So the failures, and only those, get one more run.
+          # Anything that fails twice fails the build.
+          $failed = Get-ChildItem TestResults -Filter *.trx | ForEach-Object {
+            ([xml](Get-Content $_.FullName)).TestRun.Results.UnitTestResult |
+              Where-Object { $_.outcome -eq 'Failed' } | ForEach-Object { $_.testName -replace '\(.*$', '' }
+          } | Sort-Object -Unique
+          if (!$failed) { throw "tests failed, and no failed test was found in the results" }
+          Write-Host "Running again once: $($failed -join ', ')"
+          & "${{ steps.msbuild.outputs.vstest }}" ($dlls.FullName) /Platform:x86 /Tests:($failed -join ',') /logger:trx /ResultsDirectory:TestResults/rerun
+          if ($LASTEXITCODE -ne 0) { throw "tests failed twice: $($failed -join ', ')" }
 
       - uses: actions/upload-artifact@v4
         if: always()
