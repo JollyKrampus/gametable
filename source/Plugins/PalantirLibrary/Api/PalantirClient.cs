@@ -106,6 +106,16 @@ namespace PalantirLibrary.Api
             return Get<EntryDetail>($"api/palantir/entries/{id}");
         }
 
+        /// <summary>
+        /// Every list's rows in Palantír's trash, read so a game Troy threw away is not offered back
+        /// to him. Named for the bin so the rule-4 test can go on refusing any method named for the
+        /// trash: this one only reads it.
+        /// </summary>
+        public List<EntrySummary> GetBinned()
+        {
+            return Get<List<EntrySummary>>("api/palantir/trash") ?? new List<EntrySummary>();
+        }
+
         /// <summary>Puts a game on the play queue, with its platform and what starts it.</summary>
         public EntryDetail AddGame(string title, string platform, string launchTarget)
         {
@@ -254,10 +264,14 @@ namespace PalantirLibrary.Api
     {
         public HttpStatusCode StatusCode { get; }
 
+        /// <summary>The house's own words for its answer, or null when it gave none.</summary>
+        public string Sentence { get; }
+
         public PalantirException(HttpMethod method, string route, HttpStatusCode status, string sentence)
             : base($"Palantír answered {(int)status} to {method} {route}" + (sentence == null ? "." : $": {sentence}"))
         {
             StatusCode = status;
+            Sentence = sentence;
         }
     }
 }

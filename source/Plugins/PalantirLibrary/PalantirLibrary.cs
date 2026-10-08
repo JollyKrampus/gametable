@@ -47,6 +47,11 @@ namespace PalantirLibrary
         private readonly ConcurrentDictionary<Guid, byte> applying = new ConcurrentDictionary<Guid, byte>();
         private Dictionary<Guid, EntryDetail> lastFetched = new Dictionary<Guid, EntryDetail>();
 
+        // The play list's titles and the binned play rows', as last read, for the Xbox menu entry's
+        // count: the main menu asks every time it opens and must not wait on the house. Null until
+        // both have been read.
+        private List<string> takenTitles;
+
         public override Guid Id { get; } = PluginId;
 
         public override string Name { get; } = "Palantír";
@@ -216,16 +221,11 @@ namespace PalantirLibrary
             {
                 try
                 {
-                    var added = client.AddGame(game.Name, game.Platforms?.FirstOrDefault()?.Name, LaunchTargetOf(game));
-                    lock (syncGate)
-                    {
-                        var state = store.Load();
-                        state.Link(game.Id, added.Entry.Id);
-                        state.LastRead[added.Entry.Id] = Values(added);
-                        store.Save(state);
-                    }
-
-                    SyncOne(client, game.Id, added.Entry.Id, client.GetEntry(added.Entry.Id));
+                    // An Xbox game takes Troy's word for where it is played, whichever door it comes through.
+                    var platform = game.PluginId == XboxCandidates.XboxPluginId
+                        ? XboxCandidates.PlatformWord(ToLibraryGame(game))
+                        : game.Platforms?.FirstOrDefault()?.Name;
+                    AddAndLink(client, game, platform, LaunchTargetOf(game));
                     PlayniteApi.Notifications.Add(new NotificationMessage(
                         NotificationId + game.Id, $"{game.Name} is on the Palantír play queue.", NotificationType.Info));
                 }
@@ -234,6 +234,137 @@ namespace PalantirLibrary
                     Report($"{game.Name} could not be added to Palantír", e);
                 }
             }
+        }
+
+        /// <summary>
+        /// Puts a game on the play queue and links it, keeping the house's answer as GameTable's first
+        /// read of the new row, then settles the pair.
+        /// </summary>
+        private void AddAndLink(PalantirClient client, Game game, string platform, string launchTarget)
+        {
+            var added = client.AddGame(game.Name, platform, launchTarget);
+            lock (syncGate)
+            {
+                var state = store.Load();
+                state.Link(game.Id, added.Entry.Id);
+                state.LastRead[added.Entry.Id] = Values(added);
+                store.Save(state);
+            }
+
+            SyncOne(client, game.Id, added.Entry.Id, client.GetEntry(added.Entry.Id));
+        }
+
+        // ------------------------------------------------------------------ the Xbox games
+
+        /// <summary>
+        /// "Xbox games not on the play list (N)", while N is known and more than none. Counted from
+        /// what was last read, because the main menu asks every time it opens.
+        /// </summary>
+        public override IEnumerable<MainMenuItem> GetMainMenuItems(GetMainMenuItemsArgs args)
+        {
+            var count = XboxCandidatesAgainst(takenTitles)?.Count ?? 0;
+            if (count == 0)
+            {
+                return Enumerable.Empty<MainMenuItem>();
+            }
+
+            return new List<MainMenuItem>
+            {
+                new MainMenuItem
+                {
+                    Description = $"Xbox games not on the play list ({count})",
+                    MenuSection = "@Palantír",
+                    Action = _ => XboxCandidatesView.Show(PlayniteApi, ReadXboxCandidates, AddXboxGame),
+                },
+            };
+        }
+
+        /// <summary>
+        /// The window's list, read fresh: every Add is written from it, and a bin read at the last
+        /// library update could offer a game he threw away since.
+        /// </summary>
+        private List<XboxCandidate> ReadXboxCandidates()
+        {
+            var client = NewClient(quiet: true);
+            if (client == null)
+            {
+                throw new InvalidOperationException("no house address is set. Add it in Add-ons → Extensions settings → Libraries → Palantír.");
+            }
+
+            using (client)
+            {
+                var taken = XboxCandidates.TakenTitles(client.GetPlayQueue(), client.GetBinned());
+                takenTitles = taken;
+                return XboxCandidatesAgainst(taken);
+            }
+        }
+
+        /// <returns>Null once the row is written and linked, or the sentence saying why it was not.</returns>
+        private string AddXboxGame(XboxCandidate candidate)
+        {
+            var game = PlayniteApi.Database.Games.Get(candidate.GameId);
+            if (game == null)
+            {
+                return $"{candidate.Title} is no longer in GameTable.";
+            }
+
+            var client = NewClient(quiet: true);
+            if (client == null)
+            {
+                return "No house address is set. Add it in Add-ons → Extensions settings → Libraries → Palantír.";
+            }
+
+            using (client)
+            {
+                try
+                {
+                    // No launch target: a console game has nothing a PC can open, and the PC copy is
+                    // started by its own library here.
+                    AddAndLink(client, game, candidate.Platform, null);
+                    logger.Info($"Palantír: \"{game.Name}\" added to the play list as {candidate.Platform}.");
+                    return null;
+                }
+                catch (PalantirException e) when (e.Sentence != null)
+                {
+                    // The house's own refusal, such as a title already on the list, in its own words.
+                    logger.Info($"Palantír: \"{game.Name}\" was not added: {e.Sentence}");
+                    return e.Sentence;
+                }
+                catch (Exception e)
+                {
+                    logger.Error(e, $"{game.Name} could not be added to Palantír");
+                    return $"{game.Name} could not be added to Palantír: {e.Message}";
+                }
+            }
+        }
+
+        /// <summary>The Xbox games to offer against those titles, or null while the titles are unknown.</summary>
+        private List<XboxCandidate> XboxCandidatesAgainst(List<string> taken)
+        {
+            if (taken == null)
+            {
+                return null;
+            }
+
+            var games = PlayniteApi.Database.Games
+                .Where(g => g.PluginId == XboxCandidates.XboxPluginId)
+                .Select(ToLibraryGame)
+                .ToList();
+            return XboxCandidates.Find(games, store.Load(), taken);
+        }
+
+        private static LibraryGame ToLibraryGame(Game game)
+        {
+            return new LibraryGame
+            {
+                Id = game.Id,
+                Name = game.Name,
+                PluginId = game.PluginId,
+                LibraryGameId = game.GameId,
+                Platforms = game.Platforms?.Select(p => p.SpecificationId).Where(s => !string.IsNullOrEmpty(s)).ToList() ?? new List<string>(),
+                Playtime = game.Playtime,
+                Hidden = game.Hidden,
+            };
         }
 
         private void Games_ItemUpdated(object sender, ItemUpdatedEventArgs<Game> args)
@@ -294,6 +425,7 @@ namespace PalantirLibrary
                     lastFetched = new Dictionary<Guid, EntryDetail>();
 
                     LinkAll(details);
+                    RememberTakenTitles(client, details);
 
                     var byId = details.ToDictionary(d => d.Entry.Id);
                     foreach (var link in store.Load().Links.ToList())
@@ -312,6 +444,24 @@ namespace PalantirLibrary
                 {
                     Report("Palantír could not be brought up to date", e);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Keeps the play list's titles and the binned ones for the Xbox menu entry. A bin that cannot
+        /// be read leaves the count unknown and the entry absent, rather than offering a game he threw
+        /// away.
+        /// </summary>
+        private void RememberTakenTitles(PalantirClient client, List<EntryDetail> details)
+        {
+            try
+            {
+                takenTitles = XboxCandidates.TakenTitles(details.Select(d => d.Entry), client.GetBinned());
+            }
+            catch (Exception e)
+            {
+                takenTitles = null;
+                logger.Warn(e, "Palantír: the trash could not be read, so the Xbox list waits for the next library update.");
             }
         }
 
