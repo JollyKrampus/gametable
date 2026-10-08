@@ -135,5 +135,57 @@ namespace PalantirLibrary.Tests
 
             Assert.AreEqual(4, state.LastRead[row].Rating);
         }
+
+        [Test]
+        public void AHiddenCopy_IsNotLinkedAgain_BesideTheCopyThatTookItsRow()
+        {
+            var row = Guid.NewGuid();
+            var steamCopy = Guid.NewGuid();
+            var hiddenCopy = Guid.NewGuid();
+            var state = new LinkState();
+            state.Link(steamCopy, row);
+            state.LastRead[row] = new FieldValues { Rating = 5 };
+
+            state.LinkOwnCopy(hiddenCopy, row);
+
+            Assert.IsNull(state.EntryFor(hiddenCopy));
+            CollectionAssert.AreEqual(new[] { steamCopy }, state.GamesFor(row));
+            Assert.AreEqual(5, state.LastRead[row].Rating, "nothing about the row changed");
+        }
+
+        [Test]
+        public void ARowsOwnCopy_IsLinked_WhileNoOtherGameHasTheRow()
+        {
+            var row = Guid.NewGuid();
+            var ownCopy = Guid.NewGuid();
+            var state = new LinkState();
+
+            state.LinkOwnCopy(ownCopy, row);
+
+            Assert.AreEqual(row, state.EntryFor(ownCopy));
+        }
+
+        [Test]
+        public void ARowLeftWithTwoGames_KeepsTheOtherLibrarysCopy_AndStartsAgainFromTheHouse()
+        {
+            var crowded = Guid.NewGuid();
+            var alone = Guid.NewGuid();
+            var steamCopy = Guid.NewGuid();
+            var hiddenCopy = Guid.NewGuid();
+            var aloneCopy = Guid.NewGuid();
+            var state = new LinkState();
+            state.Link(steamCopy, crowded);
+            state.Link(hiddenCopy, crowded);
+            state.Link(aloneCopy, alone);
+            state.LastRead[crowded] = new FieldValues();
+            state.LastRead[alone] = new FieldValues();
+
+            state.UnlinkOwnCopiesBesideOthers(new HashSet<Guid> { hiddenCopy, aloneCopy });
+
+            CollectionAssert.AreEqual(new[] { steamCopy }, state.GamesFor(crowded));
+            Assert.IsFalse(state.LastRead.ContainsKey(crowded), "the copy that stays takes the row as the house holds it");
+            Assert.AreEqual(alone, state.EntryFor(aloneCopy));
+            Assert.IsTrue(state.LastRead.ContainsKey(alone));
+        }
     }
 }

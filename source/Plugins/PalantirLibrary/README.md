@@ -60,6 +60,12 @@ last read of that row. The first sync then reads the row as new: the house's sta
 notes come into the game, and nothing of the game's is pushed. Before this, the newcomer's blank
 notes, score and tags read as edits made in GameTable and were written over the row's.
 
+**One game to a row.** The hidden Palantír-library copy is never linked again beside the copy that
+took its row. An earlier GameTable did that on the next library update, because a hidden copy stays
+in GameTable's database, and then the two games were settled against one row in turn, the second
+pushing its older values over his edits. A row found holding both is given back to the other
+library's copy, which takes the row as the house holds it on the next sync.
+
 ## Xbox games not on the play list
 
 Troy asked (2026-10-08) for his Xbox games, on the PC (Game Pass, the Microsoft Store) and on the

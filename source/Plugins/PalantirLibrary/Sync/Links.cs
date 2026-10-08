@@ -54,6 +54,38 @@ namespace PalantirLibrary.Sync
             LastRead.Remove(entryId);
         }
 
+        /// <summary>
+        /// Links the Palantír library's own copy of a row, unless another game already has the row.
+        /// </summary>
+        /// <remarks>
+        /// When another library's copy takes a row, the own copy is hidden and unlinked, and GameTable
+        /// keeps it. Linked again beside the other copy, two games are settled against one row, and
+        /// the one settled second still holds the older values and pushes them over his edits.
+        /// </remarks>
+        public void LinkOwnCopy(Guid gameId, Guid entryId)
+        {
+            if (!GamesFor(entryId).Any())
+            {
+                LinkAsNew(gameId, entryId);
+            }
+        }
+
+        /// <summary>
+        /// Takes the Palantír library's own copies off every row another game also has, and forgets
+        /// what was read of those rows: what an earlier GameTable left behind when it linked a hidden
+        /// copy again (<see cref="LinkOwnCopy"/>). The other copy is the one that launches and counts,
+        /// and the next sync gives it the row as the house holds it.
+        /// </summary>
+        public void UnlinkOwnCopiesBesideOthers(ICollection<Guid> ownCopies)
+        {
+            var takenByOthers = new HashSet<Guid>(Links.Where(l => !ownCopies.Contains(l.Key)).Select(l => l.Value));
+            foreach (var own in Links.Where(l => ownCopies.Contains(l.Key) && takenByOthers.Contains(l.Value)).ToList())
+            {
+                Links.Remove(own.Key);
+                LastRead.Remove(own.Value);
+            }
+        }
+
         /// <summary>Forgets a game. The row in the house is not touched (rule 4).</summary>
         public void Unlink(Guid gameId)
         {

@@ -472,6 +472,10 @@ namespace PalantirLibrary
                 var state = store.Load();
                 var games = PlayniteApi.Database.Games.ToList();
 
+                // One game to a row. A hidden copy is never linked again beside the copy that took
+                // its row, and one an earlier GameTable did link again is taken off it here.
+                state.UnlinkOwnCopiesBesideOthers(new HashSet<Guid>(games.Where(g => g.PluginId == Id).Select(g => g.Id)));
+
                 // Every link made here is a game the row did not have, so each forgets what was last
                 // read of the row (LinkAsNew). A copy imported a moment ago carries no notes at all,
                 // because a library's metadata has nowhere to put them.
@@ -479,7 +483,7 @@ namespace PalantirLibrary
                 {
                     if (Guid.TryParse(game.GameId, out var entryId))
                     {
-                        state.LinkAsNew(game.Id, entryId);
+                        state.LinkOwnCopy(game.Id, entryId);
                     }
                 }
 
