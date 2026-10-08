@@ -34,6 +34,58 @@ namespace PalantirLibrary.Sync
             Links[gameId] = entryId;
         }
 
+        /// <summary>
+        /// Links a game to a row it was not linked to, and forgets what GameTable last read of the row.
+        /// </summary>
+        /// <remarks>
+        /// What was last read was read for the row's earlier game. Kept, it makes the newcomer's blank
+        /// notes, score and tags look like edits made in GameTable, and the next sync would push them
+        /// over Troy's: a machine may never overwrite an answer he gave. Forgotten, the next sync reads
+        /// the row as never read, so the house is the truth and the game takes it all.
+        /// </remarks>
+        public void LinkAsNew(Guid gameId, Guid entryId)
+        {
+            if (EntryFor(gameId) == entryId)
+            {
+                return;
+            }
+
+            Links[gameId] = entryId;
+            LastRead.Remove(entryId);
+        }
+
+        /// <summary>
+        /// Links the Palantír library's own copy of a row, unless another game already has the row.
+        /// </summary>
+        /// <remarks>
+        /// When another library's copy takes a row, the own copy is hidden and unlinked, and GameTable
+        /// keeps it. Linked again beside the other copy, two games are settled against one row, and
+        /// the one settled second still holds the older values and pushes them over his edits.
+        /// </remarks>
+        public void LinkOwnCopy(Guid gameId, Guid entryId)
+        {
+            if (!GamesFor(entryId).Any())
+            {
+                LinkAsNew(gameId, entryId);
+            }
+        }
+
+        /// <summary>
+        /// Takes the Palantír library's own copies off every row another game also has, and forgets
+        /// what was read of those rows: what an earlier GameTable left behind when it linked a hidden
+        /// copy again (<see cref="LinkOwnCopy"/>). The other copy is the one that launches and counts,
+        /// and the next sync gives it the row as the house holds it.
+        /// </summary>
+        public void UnlinkOwnCopiesBesideOthers(ICollection<Guid> ownCopies)
+        {
+            var takenByOthers = new HashSet<Guid>(Links.Where(l => !ownCopies.Contains(l.Key)).Select(l => l.Value));
+            foreach (var own in Links.Where(l => ownCopies.Contains(l.Key) && takenByOthers.Contains(l.Value)).ToList())
+            {
+                Links.Remove(own.Key);
+                LastRead.Remove(own.Value);
+            }
+        }
+
         /// <summary>Forgets a game. The row in the house is not touched (rule 4).</summary>
         public void Unlink(Guid gameId)
         {

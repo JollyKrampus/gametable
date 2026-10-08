@@ -182,6 +182,41 @@ namespace PalantirLibrary.Tests
         }
 
         [Test]
+        public void ATitleAlreadyOnTheList_IsRefusedInTheHousesWordsAlone()
+        {
+            // What EntryService.AddAsync says to a second row under a title the list holds; the
+            // Xbox window shows Sentence as it is.
+            var house = new FakeHouse();
+            house.Answers["POST /api/palantir/entries"] = (HttpStatusCode.BadRequest,
+                "{\"code\":\"validation\",\"message\":\"'Halo Infinite' is already on the Play list.\"}");
+
+            var e = Assert.Throws<PalantirException>(() =>
+                new PalantirClient("http://house/", house).AddGame("Halo Infinite", "Xbox/PC", null));
+
+            Assert.AreEqual("'Halo Infinite' is already on the Play list.", e.Sentence);
+            var json = JObject.Parse(house.Asked.Single().Body);
+            Assert.AreEqual("Xbox/PC", (string)json["platform"]);
+            Assert.AreEqual("Play", (string)json["queue"]);
+        }
+
+        [Test]
+        public void TheBinIsOnlyRead()
+        {
+            var house = new FakeHouse();
+            house.Answers["GET /api/palantir/trash"] = (HttpStatusCode.OK,
+                $"[{{\"id\":\"{Tf2}\",\"queue\":\"Play\",\"title\":\"Starfield\",\"deletedOn\":\"2026-09-20\"}}]");
+
+            var binned = new PalantirClient("http://house/", house).GetBinned();
+
+            var (method, path, _) = house.Asked.Single();
+            Assert.AreEqual(HttpMethod.Get, method);
+            Assert.AreEqual("/api/palantir/trash", path);
+            Assert.AreEqual("Starfield", binned.Single().Title);
+            Assert.AreEqual("Play", binned.Single().Queue);
+            Assert.AreEqual("2026-09-20", binned.Single().DeletedOn);
+        }
+
+        [Test]
         public void ARowBecomesAGame_WithItsPicturesStatusScoreAndPlayButton()
         {
             var client = new PalantirClient("http://house/", new FakeHouse());

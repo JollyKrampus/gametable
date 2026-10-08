@@ -107,7 +107,16 @@ namespace PalantirLibrary.Sync
         /// <summary>Titles compared the way a person reads them: case, edges and doubled spaces ignored.</summary>
         public static bool SameTitle(string a, string b)
         {
-            return a != null && b != null && string.Equals(NormaliseTitle(a), NormaliseTitle(b), StringComparison.OrdinalIgnoreCase);
+            return a != null && b != null && string.Equals(TitleKey(a), TitleKey(b), StringComparison.Ordinal);
+        }
+
+        /// <summary>
+        /// What <see cref="SameTitle"/> compares. Two titles are the same exactly when their keys are,
+        /// so a long list can be looked up in a set instead of compared one pair at a time.
+        /// </summary>
+        public static string TitleKey(string title)
+        {
+            return NormaliseTitle(title).ToUpperInvariant();
         }
 
         public static string NormaliseTitle(string title)

@@ -4,6 +4,7 @@ using PalantirLibrary.Sync;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace PalantirLibrary.Tests
 {
@@ -99,6 +100,92 @@ namespace PalantirLibrary.Tests
 
             Assert.IsNull(state.EntryFor(game));
             Assert.IsTrue(state.LastRead.ContainsKey(entry), "the row and what was read of it are not GameTable's to throw away");
+        }
+
+        [Test]
+        public void AGameLinkedToARowItWasNot_TakesTheRowsAnswers_AndPushesNoneOfItsBlanks()
+        {
+            // What GameTable read of the row for the row's own copy, before a Steam copy arrived.
+            var row = Guid.NewGuid();
+            var house = new FieldValues { State = "Finished", Rating = 5, Notes = "beat it with Sam", Tags = new List<string> { "couch" } };
+            var state = new LinkState();
+            state.Link(Guid.NewGuid(), row);
+            state.LastRead[row] = house.Clone();
+
+            var steamCopy = Guid.NewGuid();
+            state.LinkAsNew(steamCopy, row);
+            state.LastRead.TryGetValue(row, out var lastRead);
+            var plan = SyncPlanner.Plan(lastRead, house, new FieldValues());
+
+            Assert.AreEqual(row, state.EntryFor(steamCopy));
+            Assert.IsFalse(plan.Any(s => s.Direction == SyncDirection.Push), "a machine never overwrites an answer he gave");
+            Assert.IsTrue(plan.All(s => s.Direction == SyncDirection.Pull), "the house is the truth, and the copy takes it all");
+        }
+
+        [Test]
+        public void LinkingAGameToTheRowItAlreadyHas_KeepsWhatWasRead()
+        {
+            var state = new LinkState();
+            var game = Guid.NewGuid();
+            var row = Guid.NewGuid();
+            state.Link(game, row);
+            state.LastRead[row] = new FieldValues { Rating = 4 };
+
+            state.LinkAsNew(game, row);
+
+            Assert.AreEqual(4, state.LastRead[row].Rating);
+        }
+
+        [Test]
+        public void AHiddenCopy_IsNotLinkedAgain_BesideTheCopyThatTookItsRow()
+        {
+            var row = Guid.NewGuid();
+            var steamCopy = Guid.NewGuid();
+            var hiddenCopy = Guid.NewGuid();
+            var state = new LinkState();
+            state.Link(steamCopy, row);
+            state.LastRead[row] = new FieldValues { Rating = 5 };
+
+            state.LinkOwnCopy(hiddenCopy, row);
+
+            Assert.IsNull(state.EntryFor(hiddenCopy));
+            CollectionAssert.AreEqual(new[] { steamCopy }, state.GamesFor(row));
+            Assert.AreEqual(5, state.LastRead[row].Rating, "nothing about the row changed");
+        }
+
+        [Test]
+        public void ARowsOwnCopy_IsLinked_WhileNoOtherGameHasTheRow()
+        {
+            var row = Guid.NewGuid();
+            var ownCopy = Guid.NewGuid();
+            var state = new LinkState();
+
+            state.LinkOwnCopy(ownCopy, row);
+
+            Assert.AreEqual(row, state.EntryFor(ownCopy));
+        }
+
+        [Test]
+        public void ARowLeftWithTwoGames_KeepsTheOtherLibrarysCopy_AndStartsAgainFromTheHouse()
+        {
+            var crowded = Guid.NewGuid();
+            var alone = Guid.NewGuid();
+            var steamCopy = Guid.NewGuid();
+            var hiddenCopy = Guid.NewGuid();
+            var aloneCopy = Guid.NewGuid();
+            var state = new LinkState();
+            state.Link(steamCopy, crowded);
+            state.Link(hiddenCopy, crowded);
+            state.Link(aloneCopy, alone);
+            state.LastRead[crowded] = new FieldValues();
+            state.LastRead[alone] = new FieldValues();
+
+            state.UnlinkOwnCopiesBesideOthers(new HashSet<Guid> { hiddenCopy, aloneCopy });
+
+            CollectionAssert.AreEqual(new[] { steamCopy }, state.GamesFor(crowded));
+            Assert.IsFalse(state.LastRead.ContainsKey(crowded), "the copy that stays takes the row as the house holds it");
+            Assert.AreEqual(alone, state.EntryFor(aloneCopy));
+            Assert.IsTrue(state.LastRead.ContainsKey(alone));
         }
     }
 }
