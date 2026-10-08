@@ -53,6 +53,12 @@ twice:
 Two rows with the same title are left alone. When a Steam copy is linked, the Palantír-library copy
 of that row is **hidden, not removed**.
 
+**A newly linked game starts from the row.** Whenever a game is linked to a row it was not linked to
+(a Steam copy taking the row, or the row's own copy on its first import), GameTable forgets what it
+last read of that row. The first sync then reads the row as new: the house's status, score, tags and
+notes come into the game, and nothing of the game's is pushed. Before this, the newcomer's blank
+notes, score and tags read as edits made in GameTable and were written over the row's.
+
 ## Never a deletion
 
 Removing a game in GameTable forgets the link; the row stays in the house (Palantír rule 4). The

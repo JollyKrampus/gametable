@@ -4,6 +4,7 @@ using PalantirLibrary.Sync;
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 
 namespace PalantirLibrary.Tests
 {
@@ -99,6 +100,40 @@ namespace PalantirLibrary.Tests
 
             Assert.IsNull(state.EntryFor(game));
             Assert.IsTrue(state.LastRead.ContainsKey(entry), "the row and what was read of it are not GameTable's to throw away");
+        }
+
+        [Test]
+        public void AGameLinkedToARowItWasNot_TakesTheRowsAnswers_AndPushesNoneOfItsBlanks()
+        {
+            // What GameTable read of the row for the row's own copy, before a Steam copy arrived.
+            var row = Guid.NewGuid();
+            var house = new FieldValues { State = "Finished", Rating = 5, Notes = "beat it with Sam", Tags = new List<string> { "couch" } };
+            var state = new LinkState();
+            state.Link(Guid.NewGuid(), row);
+            state.LastRead[row] = house.Clone();
+
+            var steamCopy = Guid.NewGuid();
+            state.LinkAsNew(steamCopy, row);
+            state.LastRead.TryGetValue(row, out var lastRead);
+            var plan = SyncPlanner.Plan(lastRead, house, new FieldValues());
+
+            Assert.AreEqual(row, state.EntryFor(steamCopy));
+            Assert.IsFalse(plan.Any(s => s.Direction == SyncDirection.Push), "a machine never overwrites an answer he gave");
+            Assert.IsTrue(plan.All(s => s.Direction == SyncDirection.Pull), "the house is the truth, and the copy takes it all");
+        }
+
+        [Test]
+        public void LinkingAGameToTheRowItAlreadyHas_KeepsWhatWasRead()
+        {
+            var state = new LinkState();
+            var game = Guid.NewGuid();
+            var row = Guid.NewGuid();
+            state.Link(game, row);
+            state.LastRead[row] = new FieldValues { Rating = 4 };
+
+            state.LinkAsNew(game, row);
+
+            Assert.AreEqual(4, state.LastRead[row].Rating);
         }
     }
 }

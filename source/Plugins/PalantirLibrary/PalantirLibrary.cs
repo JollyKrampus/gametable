@@ -322,11 +322,14 @@ namespace PalantirLibrary
                 var state = store.Load();
                 var games = PlayniteApi.Database.Games.ToList();
 
+                // Every link made here is a game the row did not have, so each forgets what was last
+                // read of the row (LinkAsNew). A copy imported a moment ago carries no notes at all,
+                // because a library's metadata has nowhere to put them.
                 foreach (var game in games.Where(g => g.PluginId == Id && !state.Links.ContainsKey(g.Id)))
                 {
                     if (Guid.TryParse(game.GameId, out var entryId))
                     {
-                        state.Link(game.Id, entryId);
+                        state.LinkAsNew(game.Id, entryId);
                     }
                 }
 
@@ -359,7 +362,7 @@ namespace PalantirLibrary
                         state.Unlink(own);
                     }
 
-                    state.Link(game.Id, match.Value);
+                    state.LinkAsNew(game.Id, match.Value);
                     logger.Info($"Palantír: linked \"{game.Name}\" to row {match.Value}.");
                 }
 

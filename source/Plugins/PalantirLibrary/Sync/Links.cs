@@ -34,6 +34,26 @@ namespace PalantirLibrary.Sync
             Links[gameId] = entryId;
         }
 
+        /// <summary>
+        /// Links a game to a row it was not linked to, and forgets what GameTable last read of the row.
+        /// </summary>
+        /// <remarks>
+        /// What was last read was read for the row's earlier game. Kept, it makes the newcomer's blank
+        /// notes, score and tags look like edits made in GameTable, and the next sync would push them
+        /// over Troy's: a machine may never overwrite an answer he gave. Forgotten, the next sync reads
+        /// the row as never read, so the house is the truth and the game takes it all.
+        /// </remarks>
+        public void LinkAsNew(Guid gameId, Guid entryId)
+        {
+            if (EntryFor(gameId) == entryId)
+            {
+                return;
+            }
+
+            Links[gameId] = entryId;
+            LastRead.Remove(entryId);
+        }
+
         /// <summary>Forgets a game. The row in the house is not touched (rule 4).</summary>
         public void Unlink(Guid gameId)
         {
